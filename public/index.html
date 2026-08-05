@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stock Signal Bot — Dashboard</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0b0f14;
+    --panel: #131a22;
+    --border: #223040;
+    --text: #e6edf3;
+    --muted: #8b98a5;
+    --green: #3fb950;
+    --red: #f85149;
+    --orange: #d29922;
+    --accent: #58a6ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  h1 { font-size: 1.4rem; margin: 0; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+  }
+  .badge.open { color: var(--green); border-color: var(--green); }
+  .badge.closed { color: var(--red); border-color: var(--red); }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .panel h2 {
+    font-size: 1rem;
+    margin: 0 0 12px 0;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+  select, button {
+    background: #1c2733;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  tr:hover { background: rgba(255,255,255,0.03); }
+  .type-up { color: var(--green); }
+  .type-down { color: var(--red); }
+  .type-neutral { color: var(--orange); }
+  .muted { color: var(--muted); }
+  .empty { color: var(--muted); padding: 20px; text-align: center; }
+  .win-good { color: var(--green); font-weight: 600; }
+  .win-bad { color: var(--red); font-weight: 600; }
+  footer { color: var(--muted); font-size: 0.75rem; margin-top: 24px; text-align: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📈 Stock Signal Bot</h1>
+  <div id="market-badge" class="badge">yuklanmoqda...</div>
+</header>
+
+<div class="panel">
+  <h2>Signal tarixi</h2>
+  <div class="toolbar">
+    <select id="symbol-filter">
+      <option value="">Barcha aksiyalar</option>
+    </select>
+    <button id="refresh-btn">Yangilash</button>
+    <span id="last-updated" class="muted"></span>
+  </div>
+  <div id="signals-container"><div class="empty">Yuklanmoqda...</div></div>
+</div>
+
+<div class="panel">
+  <h2>Backtest natijalari</h2>
+  <p class="muted" style="margin-top:-6px">
+    Har bir strategiya signalidan keyingi N kunlik forward return va win-rate (tarixiy ma'lumot asosida).
+    Yangilash uchun serverda <code>npm run backtest</code> ishga tushiring.
+  </p>
+  <div id="backtest-generated" class="muted" style="margin-bottom:10px"></div>
+  <div id="backtest-container"><div class="empty">Yuklanmoqda...</div></div>
+</div>
+
+<footer>stock-signal-bot dashboard</footer>
+
+<script>
+const TYPE_CLASS = {
+  oversold: 'type-up', overbought: 'type-down',
+  golden_cross: 'type-up', death_cross: 'type-down',
+  resistance_breakout: 'type-up', support_breakdown: 'type-down',
+  volume_spike: 'type-neutral',
+  bullish_crossover: 'type-up', bearish_crossover: 'type-down',
+  upper_breakout: 'type-down', lower_breakout: 'type-up',
+};
+
+async function fetchJson(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+  return res.json();
+}
+
+function fmtTime(iso) {
+  return new Date(iso).toLocaleString('en-US', {
+    timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  }) + ' NY';
+}
+
+async function loadStatus() {
+  const badge = document.getElementById('market-badge');
+  const symbolFilter = document.getElementById('symbol-filter');
+  try {
+    const status = await fetchJson('/api/status');
+    badge.textContent = status.marketOpen ? '🟢 Bozor ochiq' : '🔴 Bozor yopiq';
+    badge.className = 'badge ' + (status.marketOpen ? 'open' : 'closed');
+
+    if (symbolFilter.dataset.loaded !== '1') {
+      for (const s of status.symbols) {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        symbolFilter.appendChild(opt);
+      }
+      symbolFilter.dataset.loaded = '1';
+    }
+  } catch (err) {
+    badge.textContent = 'Holat nomaʼlum';
+  }
+}
+
+async function loadSignals() {
+  const container = document.getElementById('signals-container');
+  const symbol = document.getElementById('symbol-filter').value;
+  const url = symbol ? `/api/signals?symbol=${encodeURIComponent(symbol)}&limit=100` : '/api/signals?limit=100';
+  try {
+    const records = await fetchJson(url);
+    if (records.length === 0) {
+      container.innerHTML = '<div class="empty">Hali signal yoʼq.</div>';
+      return;
+    }
+    const rows = records.map(r => `
+      <tr>
+        <td class="muted">${fmtTime(r.time)}</td>
+        <td><strong>${r.symbol}</strong></td>
+        <td>${r.strategy}</td>
+        <td class="${TYPE_CLASS[r.type] || ''}">${r.type}</td>
+        <td>$${Number(r.price).toFixed(2)}</td>
+        <td class="muted">${r.message}</td>
+      </tr>`).join('');
+    container.innerHTML = `<table>
+      <thead><tr><th>Vaqt</th><th>Symbol</th><th>Strategiya</th><th>Turi</th><th>Narx</th><th>Tafsilot</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+    document.getElementById('last-updated').textContent = 'Oxirgi yangilanish: ' + new Date().toLocaleTimeString();
+  } catch (err) {
+    container.innerHTML = `<div class="empty">Xato: ${err.message}</div>`;
+  }
+}
+
+async function loadBacktest() {
+  const container = document.getElementById('backtest-container');
+  const genEl = document.getElementById('backtest-generated');
+  try {
+    const data = await fetchJson('/api/backtest');
+    if (!data.generatedAt) {
+      genEl.textContent = '';
+      container.innerHTML = '<div class="empty">Hali backtest ishga tushirilmagan.</div>';
+      return;
+    }
+    genEl.textContent = 'Oxirgi hisoblangan: ' + new Date(data.generatedAt).toLocaleString();
+
+    let rows = '';
+    for (const [symbol, strategies] of Object.entries(data.results)) {
+      for (const [strategy, s] of Object.entries(strategies)) {
+        for (const [n, w] of Object.entries(s.windows)) {
+          if (w.sampleSize === 0) continue;
+          const winClass = w.winRatePct >= 50 ? 'win-good' : 'win-bad';
+          rows += `<tr>
+            <td><strong>${symbol}</strong></td>
+            <td>${strategy}</td>
+            <td class="muted">${s.signalCount} ta signal</td>
+            <td>+${n} kun</td>
+            <td class="muted">${w.sampleSize}</td>
+            <td class="${winClass}">${w.winRatePct}%</td>
+            <td class="${w.avgReturnPct >= 0 ? 'win-good' : 'win-bad'}">${w.avgReturnPct}%</td>
+          </tr>`;
+        }
+      }
+    }
+    if (!rows) {
+      container.innerHTML = '<div class="empty">Bu davrda hech qanday signal topilmadi.</div>';
+      return;
+    }
+    container.innerHTML = `<table>
+      <thead><tr><th>Symbol</th><th>Strategiya</th><th>Jami</th><th>Oyna</th><th>Namuna</th><th>Win-rate</th><th>O'rtacha return</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  } catch (err) {
+    container.innerHTML = `<div class="empty">Xato: ${err.message}</div>`;
+  }
+}
+
+document.getElementById('refresh-btn').addEventListener('click', loadSignals);
+document.getElementById('symbol-filter').addEventListener('change', loadSignals);
+
+loadStatus();
+loadSignals();
+loadBacktest();
+setInterval(loadStatus, 60000);
+setInterval(loadSignals, 60000);
+</script>
+</body>
+</html>
