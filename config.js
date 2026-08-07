@@ -1,8 +1,25 @@
 require('dotenv').config();
 
 module.exports = {
-  // Kuzatilayotgan aksiyalar
-  symbols: ['AKAM', 'MRVL', 'CRDO', 'NOW', 'GOOGL', 'TSLA', 'NVDA', 'MU', 'INTC', 'AEHR', 'ZS'],
+  // Kuzatilayotgan aksiyalar — dastlabki 11 tasi + "halol aksiyalar" ro'yxatidan
+  // tanlangan yirik/likvid ~103 tasi (harbiy/qurol kompaniyalari — LMT, RTX, NOC,
+  // LHX, TXT, GD — bahsli toifa sifatida chiqarib tashlandi). Diqqat: bu faqat
+  // faoliyat sohasi bo'yicha tezkor ko'rikdan o'tgan — moliyaviy nisbatlar
+  // (qarz/foiz daromadi) tekshirilmagan, to'liq ishonch uchun Zoya/Musaffa kabi
+  // ilovada qayta tekshiring.
+  symbols: [
+    'AKAM', 'MRVL', 'CRDO', 'NOW', 'GOOGL', 'TSLA', 'NVDA', 'MU', 'INTC', 'AEHR', 'ZS',
+    'AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'ADBE', 'CRM', 'ORCL', 'CSCO', 'QCOM', 'TXN',
+    'AMAT', 'ADI', 'AMD', 'KLAC', 'LRCX', 'SNPS', 'CDNS', 'ANSS', 'PANW', 'FTNT', 'CRWD',
+    'DDOG', 'WDAY', 'TEAM', 'ZM', 'ASML', 'NXPI', 'MCHP', 'ON', 'SWKS', 'QRVO', 'MPWR',
+    'AMKR', 'JNJ', 'PFE', 'ABBV', 'LLY', 'MRK', 'BDX', 'MDT', 'REGN', 'GILD', 'BIIB',
+    'DXCM', 'IDXX', 'HOLX', 'ABT', 'NKE', 'SBUX', 'TJX', 'ULTA', 'LULU', 'TGT', 'HD',
+    'LOW', 'PG', 'KO', 'PEP', 'CL', 'EL', 'MNST', 'HON', 'ITW', 'EMR', 'ETN', 'PH',
+    'DOV', 'CMI', 'FAST', 'PWR', 'XOM', 'CVX', 'COP', 'SLB', 'VLO', 'EOG', 'V', 'MA',
+    'SPGI', 'MSCI', 'FIS', 'CSX', 'UNP', 'JBHT', 'ADSK', 'PLD', 'EQIX', 'AVB', 'WELL',
+    'DHR', 'ECL', 'APD', 'SHW', 'NEM', 'FCX', 'GLW', 'HPQ', 'YELP', 'ETSY', 'EBAY',
+    'PDD', 'JD',
+  ],
 
   telegram: {
     token: process.env.TELEGRAM_BOT_TOKEN,
