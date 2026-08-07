@@ -35,6 +35,12 @@ function buildBot() {
   }
   const bot = new Telegraf(config.telegram.token);
 
+  // Telegraf o'zi ushlay olmagan xatolar (masalan reply/sendMessage rad etilishi)
+  // butun Node jarayonini qulatib yubormasligi uchun so'nggi himoya qatlami.
+  bot.catch((err, ctx) => {
+    console.error(`Bot xatosi (${ctx.updateType}):`, err);
+  });
+
   bot.command('start', (ctx) => {
     const isNew = subscriberStore.addSubscriber(ctx.chat.id, {
       username: ctx.from?.username,
@@ -50,12 +56,12 @@ function buildBot() {
         `Kuzatilayotgan aksiyalar: ${symbolList}\n\n` +
         `Strategiyalar: RSI, MA 50/200 Crossover, Support/Resistance Breakout, ` +
         `Volume Spike, MACD, Bollinger Bands.\n\n` +
-        `Bozor ochiq bo'lganda (NYSE/NASDAQ, America/New_York) har daqiqada tekshiriladi ` +
+        `Bozor ochiq bo'lganda (NYSE/NASDAQ, Nyu-York vaqti bilan) har daqiqada tekshiriladi ` +
         `va signal chiqsa shu yerga yuboriladi.\n\n` +
         `/status — oxirgi signallar va bozor holati\n` +
         `/stop — signal olishni to'xtatish`,
       { parse_mode: 'Markdown' }
-    );
+    ).catch((err) => console.error('/start javobida xato:', err.message));
   });
 
   bot.command('stop', (ctx) => {
@@ -64,7 +70,7 @@ function buildBot() {
       removed
         ? 'Siz signal ro\'yxatidan chiqarildingiz. Qayta yozilish uchun /start bosing.'
         : 'Siz hozircha signal ro\'yxatida emassiz.'
-    );
+    ).catch((err) => console.error('/stop javobida xato:', err.message));
   });
 
   bot.command('status', (ctx) => {
@@ -92,7 +98,7 @@ function buildBot() {
         })
         .join('\n');
     }
-    ctx.reply(text, { parse_mode: 'Markdown' });
+    ctx.reply(text, { parse_mode: 'Markdown' }).catch((err) => console.error('/status javobida xato:', err.message));
   });
 
   return bot;

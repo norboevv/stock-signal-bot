@@ -3,6 +3,17 @@ const { buildBot } = require('./src/telegramBot');
 const { createApp } = require('./src/webDashboard');
 const { startScheduler } = require('./src/scheduler');
 
+// So'nggi himoya qatlami: kutilmagan promise rejection yoki xato butun
+// ilovani (bot + dashboard + scheduler) qulatib yubormasligi uchun.
+// Masalan bitta noto'g'ri formatlangan Telegram xabari avval butun
+// jarayonni o'chirib qo'ygan edi — bu shuni takrorlanmasligini kafolatlaydi.
+process.on('unhandledRejection', (err) => {
+  console.error('Ushlanmagan promise xatosi:', err);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Ushlanmagan xato:', err);
+});
+
 function main() {
   const bot = buildBot();
 
