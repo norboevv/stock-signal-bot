@@ -19,6 +19,13 @@ module.exports = {
     'SPGI', 'MSCI', 'FIS', 'CSX', 'UNP', 'JBHT', 'ADSK', 'PLD', 'EQIX', 'AVB', 'WELL',
     'DHR', 'ECL', 'APD', 'SHW', 'NEM', 'FCX', 'GLW', 'HPQ', 'YELP', 'ETSY', 'EBAY',
     'PDD', 'JD',
+    // Qo'shimcha kuzatuv ro'yxati (foydalanuvchi tomonidan berilgan)
+    'TTD', 'BE', 'SNDK', 'NBIS', 'RIOT', 'YOU', 'ARM', 'AAP', 'ANET', 'ORLY', 'ITGR',
+    'HAL', 'TSM', 'BYD', 'FLNC', 'LNTH', 'DECK', 'TS', 'SEDG', 'TMDX', 'UNH', 'JLL',
+    'IWM', 'MCO', 'STRA', 'AVGO', 'PINS', 'ONON', 'INCY', 'IRTC', 'SNOW', 'SHOP', 'ONDS',
+    'S', 'OKTA', 'CCJ', 'BRZE', 'IREN', 'DASH', 'ENPH', 'HOOD', 'SMCI', 'DOCU', 'BVN',
+    'CRWV', 'HIMS', 'B', 'UBER', 'MSTR', 'IOT', 'DNOW', 'RDDT', 'RKLB', 'TEM', 'SPCX',
+    'OKLO', 'A', 'APLD', 'APP', 'CIEN', 'ZETA',
   ],
 
   telegram: {
@@ -63,6 +70,16 @@ module.exports = {
       enabled: true,
       period: 20,
       stdDev: 2,
+    },
+    rsiReversal: {
+      enabled: true,
+      period: 14,
+      oversoldThreshold: 30,
+    },
+    emaCrossover: {
+      enabled: true,
+      fastPeriod: 9,
+      slowPeriod: 21,
     },
   },
 

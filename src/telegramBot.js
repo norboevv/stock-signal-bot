@@ -16,6 +16,8 @@ const TYPE_EMOJI = {
   bearish_crossover: '🔴',
   upper_breakout: '🔴',
   lower_breakout: '🟢',
+  oversold_reversal: '🟢',
+  ema_bullish_cross: '🟢',
 };
 
 function formatSignalMessage(record) {

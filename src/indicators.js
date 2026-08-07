@@ -1,4 +1,4 @@
-const { RSI, SMA, MACD, BollingerBands } = require('technicalindicators');
+const { RSI, SMA, EMA, MACD, BollingerBands } = require('technicalindicators');
 
 function closesOf(candles) {
   return candles.map((c) => c.close);
@@ -212,6 +212,60 @@ function checkBollingerBands(dailyCandles, cfg) {
   return null;
 }
 
+/**
+ * RSI oversold richalanish (reversal): RSI oversold zonaga (cfg.oversoldThreshold)
+ * tushib, so'ng pasayishdan ko'tarilishga o'tgan (trough hosil qilgan) payt.
+ * Oddiy "oversold'ga kirdi" signalidan farqli — bu yerda narx hali pasayib
+ * turganda emas, aynan yo'nalish o'zgargan (richalanish boshlangan) daqiqada
+ * triggerlanadi.
+ */
+function checkRsiReversal(dailyCandles, cfg) {
+  const closes = closesOf(dailyCandles);
+  const values = RSI.calculate({ values: closes, period: cfg.period });
+  if (values.length < 3) return null;
+
+  const prev2 = values[values.length - 3];
+  const prev = values[values.length - 2];
+  const curr = values[values.length - 1];
+  const price = closes[closes.length - 1];
+
+  if (prev < cfg.oversoldThreshold && prev2 > prev && curr > prev) {
+    return {
+      strategy: 'RSI Reversal',
+      type: 'oversold_reversal',
+      price,
+      message: `RSI(${cfg.period}) oversold zonadan (${prev.toFixed(1)}) richalanmoqda — hozir ${curr.toFixed(1)}`,
+      meta: { rsi: curr, trough: prev },
+    };
+  }
+  return null;
+}
+
+/** EMA 9/21 bullish crossover: tezkor EMA sekin EMA'ni pastdan tepaga kesib o'tishi. */
+function checkEmaCrossover(dailyCandles, cfg) {
+  const closes = closesOf(dailyCandles);
+  const fast = EMA.calculate({ values: closes, period: cfg.fastPeriod });
+  const slow = EMA.calculate({ values: closes, period: cfg.slowPeriod });
+  if (fast.length < 2 || slow.length < 2) return null;
+
+  const fastCurr = fast[fast.length - 1];
+  const fastPrev = fast[fast.length - 2];
+  const slowCurr = slow[slow.length - 1];
+  const slowPrev = slow[slow.length - 2];
+  const price = closes[closes.length - 1];
+
+  if (fastPrev <= slowPrev && fastCurr > slowCurr) {
+    return {
+      strategy: 'EMA Crossover',
+      type: 'ema_bullish_cross',
+      price,
+      message: `EMA${cfg.fastPeriod} (${fastCurr.toFixed(2)}) EMA${cfg.slowPeriod}dan (${slowCurr.toFixed(2)}) pastdan tepaga o'tdi`,
+      meta: { fast: fastCurr, slow: slowCurr },
+    };
+  }
+  return null;
+}
+
 module.exports = {
   checkRsi,
   checkMaCrossover,
@@ -219,4 +273,6 @@ module.exports = {
   checkVolumeSpike,
   checkMacd,
   checkBollingerBands,
+  checkRsiReversal,
+  checkEmaCrossover,
 };

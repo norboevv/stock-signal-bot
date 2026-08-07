@@ -16,6 +16,8 @@ const TYPE_DIRECTION = {
   bearish_crossover: -1,
   upper_breakout: -1,
   lower_breakout: 1,
+  oversold_reversal: 1,
+  ema_bullish_cross: 1,
 };
 
 // Volume Spike intraday (1-daqiqalik) ma'lumot talab qiladi, Yahoo esa buni
@@ -26,6 +28,8 @@ const BACKTEST_CHECKS = [
   { key: 'supportResistance', fn: (window, cfg) => indicators.checkSupportResistance(window, cfg.supportResistance) },
   { key: 'macd', fn: (window, cfg) => indicators.checkMacd(window, cfg.macd) },
   { key: 'bollingerBands', fn: (window, cfg) => indicators.checkBollingerBands(window, cfg.bollingerBands) },
+  { key: 'rsiReversal', fn: (window, cfg) => indicators.checkRsiReversal(window, cfg.rsiReversal) },
+  { key: 'emaCrossover', fn: (window, cfg) => indicators.checkEmaCrossover(window, cfg.emaCrossover) },
 ];
 
 const MIN_BARS = 200; // MA200 uchun kamida shuncha bar kerak

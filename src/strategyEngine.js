@@ -10,6 +10,8 @@ const STRATEGY_CHECKS = [
   { key: 'volumeSpike', fn: (daily, intraday, cfg) => indicators.checkVolumeSpike(intraday, daily, cfg) },
   { key: 'macd', fn: (daily, intraday, cfg) => indicators.checkMacd(daily, cfg) },
   { key: 'bollingerBands', fn: (daily, intraday, cfg) => indicators.checkBollingerBands(daily, cfg) },
+  { key: 'rsiReversal', fn: (daily, intraday, cfg) => indicators.checkRsiReversal(daily, cfg) },
+  { key: 'emaCrossover', fn: (daily, intraday, cfg) => indicators.checkEmaCrossover(daily, cfg) },
 ];
 
 // Daily candle'lar daqiqada bir necha marta o'zgarmaydi — Yahoo'ga har daqiqada
