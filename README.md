@@ -29,9 +29,6 @@ cp .env.example .env
 
 - **TELEGRAM_BOT_TOKEN** — Telegram'da `@BotFather` ga yozib `/newbot` bilan yangi bot
   yarating, u bergan tokenni shu yerga qo'ying.
-- **TELEGRAM_CHAT_ID** — signal yuboriladigan chat ID. Shaxsiy testda o'zingizga yuborish
-  uchun `@userinfobot` orqali o'z Telegram user ID'ingizni oling. Guruh/kanal uchun botni
-  o'sha joyga admin qilib qo'shing va guruh ID'sini oling (odatda `-100...` bilan boshlanadi).
 - **DASHBOARD_PASSWORD** — web dashboard'ga kirish uchun parol (Basic Auth). Standart
   qiymatni albatta o'zgartiring.
 - **PORT** — lokal ishga tushirishda dashboard porti (standart 3000). aHost.uz'da bu
@@ -44,7 +41,9 @@ npm start
 ```
 
 Bu bitta process ichida uchtasini birdan ishga tushiradi:
-- Telegram bot (polling rejimida, `/start` va `/status` komandalari)
+- Telegram bot (polling rejimida). Botga `/start` yozgan har bir kishi avtomatik signal
+  ro'yxatiga qo'shiladi (`data/subscribers.json`) va signallarni oladi; `/stop` bilan
+  chiqib ketish mumkin; `/status` — oxirgi signallar, bozor holati va obunachilar soni.
 - Web dashboard (`http://localhost:3000`)
 - Scheduler — har daqiqada, faqat NYSE/NASDAQ ochiq vaqtida (`America/New_York`, DST
   avtomatik) barcha strategiyalarni tekshiradi
@@ -91,12 +90,21 @@ kafolatlamaydi.
    npm install
    ```
 5. cPanel Node.js App sahifasidagi **Environment Variables** bo'limiga `.env`
-   fayldagi barcha qiymatlarni qo'shing (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
-   `DASHBOARD_PASSWORD`). `PORT`ni qo'lda qo'shmang — Passenger buni o'zi beradi.
+   fayldagi qiymatlarni qo'shing (`TELEGRAM_BOT_TOKEN`, `DASHBOARD_PASSWORD`).
+   `PORT`ni qo'lda qo'shmang — Passenger buni o'zi beradi. Parolda `!`, `$`, `` ` ``,
+   `"`, boshqa maxsus belgilardan foydalanmang — cPanel'ning ba'zi versiyalarida
+   ular env var export skriptini buzadi.
 6. **Restart** tugmasini bosing. Ilova ishga tushgach, cPanel ko'rsatgan domen/subdomen
    orqali dashboard ochiladi, bot esa Telegram'da polling rejimida ishlay boshlaydi.
-7. Tekshirish: Telegram'da botga `/start` yozing, keyin bozor ochiq vaqtida `/status`
-   bilan signal tarixini kuzating.
+7. Tekshirish: Telegram'da botga `/start` yozing — javob va obuna tasdig'i kelishi kerak.
+   Oila a'zolari ham xuddi shu botga `/start` bosishi kifoya — hammasi avtomatik signal
+   oluvchilar ro'yxatiga qo'shiladi. `/status` — bozor holati va obunachilar soni.
+
+**Muhim:** Node App sozlamalarini o'zgartirib qayta-qayta test qilayotganda, terminalda
+qo'lda `node index.js` ishga tushirsangiz, uni **Ctrl+C** bilan albatta to'xtating va
+Passenger'ning o'z nusxasi bilan bir vaqtda ikkalasi ishlab turmasin — Telegram bitta
+bot tokeniga faqat bitta polling ulanishga ruxsat beradi, ikkinchisi bo'lsa botning
+javob berishini to'sib qo'yishi mumkin.
 
 **Eslatma:** cPanel Passenger jarayonni doim tirik ushlab turadi (crash bo'lsa qayta
 ishga tushiradi), shuning uchun alohida process manager (pm2 va h.k.) kerak emas.

@@ -1,6 +1,7 @@
 const { Telegraf } = require('telegraf');
 const config = require('../config');
 const signalStore = require('./signalStore');
+const subscriberStore = require('./subscriberStore');
 const { isMarketOpen } = require('./marketHours');
 
 const TYPE_EMOJI = {
@@ -35,24 +36,44 @@ function buildBot() {
   const bot = new Telegraf(config.telegram.token);
 
   bot.command('start', (ctx) => {
+    const isNew = subscriberStore.addSubscriber(ctx.chat.id, {
+      username: ctx.from?.username,
+      firstName: ctx.from?.first_name,
+    });
     const symbolList = config.symbols.join(', ');
+    const subscribedLine = isNew
+      ? `✅ Siz signal ro'yxatiga qo'shildingiz — endi yangi signal chiqqanda shu yerga yuboriladi.\n\n`
+      : `Siz allaqachon signal ro'yxatidasiz.\n\n`;
     ctx.reply(
       `📈 *Stock Signal Bot*\n\n` +
+        subscribedLine +
         `Kuzatilayotgan aksiyalar: ${symbolList}\n\n` +
         `Strategiyalar: RSI, MA 50/200 Crossover, Support/Resistance Breakout, ` +
         `Volume Spike, MACD, Bollinger Bands.\n\n` +
         `Bozor ochiq bo'lganda (NYSE/NASDAQ, America/New_York) har daqiqada tekshiriladi ` +
         `va signal chiqsa shu yerga yuboriladi.\n\n` +
-        `/status — oxirgi signallar va bozor holati`,
+        `/status — oxirgi signallar va bozor holati\n` +
+        `/stop — signal olishni to'xtatish`,
       { parse_mode: 'Markdown' }
+    );
+  });
+
+  bot.command('stop', (ctx) => {
+    const removed = subscriberStore.removeSubscriber(ctx.chat.id);
+    ctx.reply(
+      removed
+        ? 'Siz signal ro\'yxatidan chiqarildingiz. Qayta yozilish uchun /start bosing.'
+        : 'Siz hozircha signal ro\'yxatida emassiz.'
     );
   });
 
   bot.command('status', (ctx) => {
     const open = isMarketOpen();
     const recent = signalStore.getRecentSignals(10);
+    const subscriberCount = subscriberStore.getSubscribers().length;
 
-    let text = `Bozor holati: ${open ? '🟢 ochiq' : '🔴 yopiq'}\n\n`;
+    let text = `Bozor holati: ${open ? '🟢 ochiq' : '🔴 yopiq'}\n`;
+    text += `Obunachilar: ${subscriberCount}\n\n`;
     if (recent.length === 0) {
       text += 'Hali signal yo\'q.';
     } else {
@@ -77,17 +98,28 @@ function buildBot() {
   return bot;
 }
 
+/** Signalni /start bosgan barcha obunachilarga yuboradi. Bloklagan/o'chirilgan chat'lar ro'yxatdan avtomatik olib tashlanadi. */
 async function sendSignal(bot, record) {
-  if (!config.telegram.chatId) {
-    console.warn('TELEGRAM_CHAT_ID sozlanmagan, signal yuborilmadi:', record.symbol, record.strategy);
+  const subscribers = subscriberStore.getSubscribers();
+  if (subscribers.length === 0) {
+    console.warn('Obunachi yo\'q, signal hech kimga yuborilmadi:', record.symbol, record.strategy);
     return;
   }
-  try {
-    await bot.telegram.sendMessage(config.telegram.chatId, formatSignalMessage(record), {
-      parse_mode: 'Markdown',
-    });
-  } catch (err) {
-    console.error('Telegram xabar yuborishda xato:', err.message);
+
+  const text = formatSignalMessage(record);
+  for (const { chatId } of subscribers) {
+    try {
+      await bot.telegram.sendMessage(chatId, text, { parse_mode: 'Markdown' });
+    } catch (err) {
+      const code = err?.response?.error_code;
+      if (code === 403) {
+        // Foydalanuvchi botni bloklagan yoki chat'ni o'chirgan — ro'yxatdan olib tashlaymiz
+        subscriberStore.removeSubscriber(chatId);
+        console.warn(`Obunachi ${chatId} botni bloklagan, ro'yxatdan olib tashlandi.`);
+      } else {
+        console.error(`Telegram xabar yuborishda xato (${chatId}):`, err.message);
+      }
+    }
   }
 }
 
