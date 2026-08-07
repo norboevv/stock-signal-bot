@@ -67,7 +67,7 @@ module.exports = {
       signalPeriod: 9,
     },
     bollingerBands: {
-      enabled: true,
+      enabled: false,
       period: 20,
       stdDev: 2,
     },
