@@ -28,13 +28,18 @@ const STRATEGY_LABELS = {
   macd: 'MACD',
   bollingerBands: 'Bollinger Bands',
   rsiReversal: 'RSI Reversal',
-  emaCrossover: 'EMA 9/21 Crossover',
 };
 
 function enabledStrategyList() {
   return Object.entries(config.strategies)
     .filter(([, cfg]) => cfg.enabled)
-    .map(([key]) => STRATEGY_LABELS[key] || key)
+    .map(([key, cfg]) => {
+      if (key === 'emaCrossover' && Array.isArray(cfg.pairs)) {
+        const pairList = cfg.pairs.map((p) => `${p.fastPeriod}/${p.slowPeriod}`).join(', ');
+        return `EMA Crossover (${pairList})`;
+      }
+      return STRATEGY_LABELS[key] || key;
+    })
     .join(', ');
 }
 

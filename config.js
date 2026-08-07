@@ -78,8 +78,12 @@ module.exports = {
     },
     emaCrossover: {
       enabled: true,
-      fastPeriod: 9,
-      slowPeriod: 21,
+      pairs: [
+        { fastPeriod: 9, slowPeriod: 21 },
+        { fastPeriod: 9, slowPeriod: 50 },
+        { fastPeriod: 21, slowPeriod: 50 },
+        { fastPeriod: 50, slowPeriod: 200 },
+      ],
     },
   },
 

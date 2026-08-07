@@ -241,29 +241,39 @@ function checkRsiReversal(dailyCandles, cfg) {
   return null;
 }
 
-/** EMA 9/21 bullish crossover: tezkor EMA sekin EMA'ni pastdan tepaga kesib o'tishi. */
+/**
+ * EMA bullish crossover: tezkor EMA sekin EMA'ni pastdan tepaga kesib o'tishi.
+ * cfg.pairs — {fastPeriod, slowPeriod} juftliklari ro'yxati (masalan 9/21, 9/50,
+ * 21/50, 50/200) — bir kunda bir nechta juftlik bir vaqtda crossover berishi
+ * mumkin, shuning uchun bitta signal o'rniga massiv qaytaradi.
+ */
 function checkEmaCrossover(dailyCandles, cfg) {
   const closes = closesOf(dailyCandles);
-  const fast = EMA.calculate({ values: closes, period: cfg.fastPeriod });
-  const slow = EMA.calculate({ values: closes, period: cfg.slowPeriod });
-  if (fast.length < 2 || slow.length < 2) return null;
+  const signals = [];
 
-  const fastCurr = fast[fast.length - 1];
-  const fastPrev = fast[fast.length - 2];
-  const slowCurr = slow[slow.length - 1];
-  const slowPrev = slow[slow.length - 2];
-  const price = closes[closes.length - 1];
+  for (const pair of cfg.pairs) {
+    const fast = EMA.calculate({ values: closes, period: pair.fastPeriod });
+    const slow = EMA.calculate({ values: closes, period: pair.slowPeriod });
+    if (fast.length < 2 || slow.length < 2) continue;
 
-  if (fastPrev <= slowPrev && fastCurr > slowCurr) {
-    return {
-      strategy: 'EMA Crossover',
-      type: 'ema_bullish_cross',
-      price,
-      message: `EMA${cfg.fastPeriod} (${fastCurr.toFixed(2)}) EMA${cfg.slowPeriod}dan (${slowCurr.toFixed(2)}) pastdan tepaga o'tdi`,
-      meta: { fast: fastCurr, slow: slowCurr },
-    };
+    const fastCurr = fast[fast.length - 1];
+    const fastPrev = fast[fast.length - 2];
+    const slowCurr = slow[slow.length - 1];
+    const slowPrev = slow[slow.length - 2];
+    const price = closes[closes.length - 1];
+
+    if (fastPrev <= slowPrev && fastCurr > slowCurr) {
+      signals.push({
+        strategy: `EMA ${pair.fastPeriod}/${pair.slowPeriod} Crossover`,
+        type: 'ema_bullish_cross',
+        price,
+        message: `EMA${pair.fastPeriod} (${fastCurr.toFixed(2)}) EMA${pair.slowPeriod}dan (${slowCurr.toFixed(2)}) pastdan tepaga o'tdi`,
+        meta: { fast: fastCurr, slow: slowCurr, fastPeriod: pair.fastPeriod, slowPeriod: pair.slowPeriod },
+      });
+    }
   }
-  return null;
+
+  return signals.length > 0 ? signals : null;
 }
 
 module.exports = {

@@ -77,11 +77,17 @@ async function runForSymbol(symbol, cooldownMap) {
       continue;
     }
     if (!result) continue;
-    if (isOnCooldown(cooldownMap, symbol, result.strategy, config.cooldownMinutes)) continue;
 
-    const record = signalStore.appendSignal({ symbol, ...result });
-    cooldownMap.set(`${symbol}|${result.strategy}`, new Date(record.time));
-    newSignals.push(record);
+    // Ba'zi strategiyalar (masalan bir nechta EMA juftligi) bir vaqtda
+    // birdan ortiq signal berishi mumkin — massiv yoki bitta obyekt bo'lishi mumkin.
+    const results = Array.isArray(result) ? result : [result];
+    for (const r of results) {
+      if (isOnCooldown(cooldownMap, symbol, r.strategy, config.cooldownMinutes)) continue;
+
+      const record = signalStore.appendSignal({ symbol, ...r });
+      cooldownMap.set(`${symbol}|${r.strategy}`, new Date(record.time));
+      newSignals.push(record);
+    }
   }
 
   return newSignals;

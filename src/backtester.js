@@ -44,34 +44,37 @@ function backtestSymbol(dailyCandles, strategiesCfg, forwardWindows) {
       const cfg = strategiesCfg[check.key];
       if (!cfg || !cfg.enabled) continue;
 
-      let signal;
+      let result;
       try {
-        signal = check.fn(window, strategiesCfg);
+        result = check.fn(window, strategiesCfg);
       } catch {
         continue;
       }
-      if (!signal) continue;
+      if (!result) continue;
 
-      const direction = TYPE_DIRECTION[signal.type] ?? 0;
-      if (!raw[signal.strategy]) raw[signal.strategy] = { count: 0, windows: {} };
-      raw[signal.strategy].count += 1;
+      const signals = Array.isArray(result) ? result : [result];
+      for (const signal of signals) {
+        const direction = TYPE_DIRECTION[signal.type] ?? 0;
+        if (!raw[signal.strategy]) raw[signal.strategy] = { count: 0, windows: {} };
+        raw[signal.strategy].count += 1;
 
-      for (const N of forwardWindows) {
-        const futureIdx = i + N;
-        if (futureIdx >= dailyCandles.length) continue;
+        for (const N of forwardWindows) {
+          const futureIdx = i + N;
+          if (futureIdx >= dailyCandles.length) continue;
 
-        const startPrice = dailyCandles[i].close;
-        const endPrice = dailyCandles[futureIdx].close;
-        const rawReturnPct = ((endPrice - startPrice) / startPrice) * 100;
-        const signedReturnPct = direction === 0 ? rawReturnPct : rawReturnPct * direction;
+          const startPrice = dailyCandles[i].close;
+          const endPrice = dailyCandles[futureIdx].close;
+          const rawReturnPct = ((endPrice - startPrice) / startPrice) * 100;
+          const signedReturnPct = direction === 0 ? rawReturnPct : rawReturnPct * direction;
 
-        if (!raw[signal.strategy].windows[N]) {
-          raw[signal.strategy].windows[N] = { total: 0, wins: 0, sumReturn: 0 };
+          if (!raw[signal.strategy].windows[N]) {
+            raw[signal.strategy].windows[N] = { total: 0, wins: 0, sumReturn: 0 };
+          }
+          const w = raw[signal.strategy].windows[N];
+          w.total += 1;
+          if (signedReturnPct > 0) w.wins += 1;
+          w.sumReturn += signedReturnPct;
         }
-        const w = raw[signal.strategy].windows[N];
-        w.total += 1;
-        if (signedReturnPct > 0) w.wins += 1;
-        w.sumReturn += signedReturnPct;
       }
     }
   }
