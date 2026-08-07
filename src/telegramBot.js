@@ -20,6 +20,24 @@ const TYPE_EMOJI = {
   ema_bullish_cross: '🟢',
 };
 
+const STRATEGY_LABELS = {
+  rsi: 'RSI',
+  maCrossover: 'MA 50/200 Crossover',
+  supportResistance: 'Support/Resistance Breakout',
+  volumeSpike: 'Volume Spike',
+  macd: 'MACD',
+  bollingerBands: 'Bollinger Bands',
+  rsiReversal: 'RSI Reversal',
+  emaCrossover: 'EMA 9/21 Crossover',
+};
+
+function enabledStrategyList() {
+  return Object.entries(config.strategies)
+    .filter(([, cfg]) => cfg.enabled)
+    .map(([key]) => STRATEGY_LABELS[key] || key)
+    .join(', ');
+}
+
 function formatSignalMessage(record) {
   const emoji = TYPE_EMOJI[record.type] || '🔔';
   const time = new Date(record.time).toLocaleString('en-US', { timeZone: config.marketTimezone });
@@ -55,9 +73,8 @@ function buildBot() {
     ctx.reply(
       `📈 *Stock Signal Bot*\n\n` +
         subscribedLine +
-        `Kuzatilayotgan aksiyalar: ${symbolList}\n\n` +
-        `Strategiyalar: RSI, MA 50/200 Crossover, Support/Resistance Breakout, ` +
-        `Volume Spike, MACD, Bollinger Bands.\n\n` +
+        `Kuzatilayotgan aksiyalar (${config.symbols.length} ta): ${symbolList}\n\n` +
+        `Strategiyalar: ${enabledStrategyList()}.\n\n` +
         `Bozor ochiq bo'lganda (NYSE/NASDAQ, Nyu-York vaqti bilan) har daqiqada tekshiriladi ` +
         `va signal chiqsa shu yerga yuboriladi.\n\n` +
         `/status — oxirgi signallar va bozor holati\n` +
