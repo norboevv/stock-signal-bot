@@ -40,13 +40,13 @@ module.exports = {
   // Har bir strategiya uchun sozlamalar
   strategies: {
     rsi: {
-      enabled: true,
+      enabled: false,
       period: 14,
       oversold: 30,
       overbought: 70,
     },
     maCrossover: {
-      enabled: true,
+      enabled: false,
       fastPeriod: 50,
       slowPeriod: 200,
     },
