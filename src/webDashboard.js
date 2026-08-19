@@ -4,8 +4,12 @@ const fs = require('fs');
 const config = require('../config');
 const signalStore = require('./signalStore');
 const { isMarketOpen } = require('./marketHours');
+const { runCycle } = require('./strategyEngine');
+const { getWebhookPath, sendSignal } = require('./telegramBot');
 
 const BACKTEST_FILE = path.join(__dirname, '..', 'data', 'backtest-results.json');
+
+let runCycleInProgress = false; // ustma-ust kelgan cron so'rovlari bir vaqtda ishlamasin
 
 function basicAuth(req, res, next) {
   const password = config.server.dashboardPassword;
@@ -21,8 +25,51 @@ function basicAuth(req, res, next) {
   return res.status(401).send('Autentifikatsiya talab qilinadi');
 }
 
-function createApp() {
+/**
+ * createApp(bot) — bot parametri ikki narsa uchun kerak: Telegram webhook
+ * update'larini qabul qilish, va /api/run-cycle orqali topilgan signallarni
+ * obunachilarga yuborish. Ikkalasi ham basicAuth'dan OLDIN ro'yxatdan
+ * o'tkaziladi, chunki Telegram va tashqi cron so'rovi Basic Auth
+ * header'ini yubormaydi — ular o'z maxfiy token'lari bilan himoyalangan.
+ */
+function createApp(bot) {
   const app = express();
+
+  if (bot) {
+    // Path'ni app.use()ning o'z mount-argumenti sifatida emas, middleware
+    // ichida beramiz — aks holda Express uni req.url'dan "kesib tashlaydi"
+    // va Telegraf'ning ichki yo'l solishtiruvi (to'liq req.url bilan)
+    // mos kelmay, so'rov basicAuth'ga o'tib ketadi.
+    app.use(bot.webhookCallback(getWebhookPath()));
+
+    app.get('/api/run-cycle', async (req, res) => {
+      if (!config.cron.secret || req.query.token !== config.cron.secret) {
+        return res.status(403).json({ error: 'forbidden' });
+      }
+      if (!isMarketOpen()) {
+        return res.json({ skipped: true, reason: 'market_closed' });
+      }
+      if (runCycleInProgress) {
+        return res.json({ skipped: true, reason: 'already_running' });
+      }
+
+      runCycleInProgress = true;
+      try {
+        const signals = await runCycle();
+        for (const signal of signals) {
+          console.log(`Signal: ${signal.symbol} — ${signal.strategy} — ${signal.type}`);
+          await sendSignal(bot, signal);
+        }
+        res.json({ signals: signals.length });
+      } catch (err) {
+        console.error('run-cycle xatosi:', err);
+        res.status(500).json({ error: err.message });
+      } finally {
+        runCycleInProgress = false;
+      }
+    });
+  }
+
   app.use(basicAuth);
   app.use(express.static(path.join(__dirname, '..', 'public')));
 

@@ -54,6 +54,30 @@ function formatSignalMessage(record) {
   );
 }
 
+/** Telegram webhook manzilining yo'l qismi — maxfiy token bilan himoyalangan. */
+function getWebhookPath() {
+  if (!config.telegram.webhookSecret) {
+    throw new Error('TELEGRAM_WEBHOOK_SECRET .env faylida topilmadi');
+  }
+  return `/telegram-webhook/${config.telegram.webhookSecret}`;
+}
+
+/**
+ * Botni Telegram serveriga "shu manzilga xabar yubor" deb ro'yxatdan
+ * o'tkazadi. Shared hosting'da process doim tirik turmagani uchun
+ * long-polling (bot.launch()) o'rniga webhook ishlatiladi — Telegram har
+ * safar update kelganda alohida HTTP so'rov yuboradi, process doimiy
+ * ishlab turishi shart emas.
+ */
+async function setupWebhook(bot) {
+  if (!config.server.publicUrl) {
+    throw new Error('PUBLIC_URL .env faylida topilmadi (masalan https://bot.landmark.uz)');
+  }
+  const url = `${config.server.publicUrl.replace(/\/+$/, '')}${getWebhookPath()}`;
+  await bot.telegram.setWebhook(url);
+  console.log('Telegram webhook ro\'yxatdan o\'tkazildi:', url);
+}
+
 function buildBot() {
   if (!config.telegram.token) {
     throw new Error('TELEGRAM_BOT_TOKEN .env faylida topilmadi');
@@ -80,7 +104,7 @@ function buildBot() {
         subscribedLine +
         `Kuzatilayotgan aksiyalar (${config.symbols.length} ta): ${symbolList}\n\n` +
         `Strategiyalar: ${enabledStrategyList()}.\n\n` +
-        `Bozor ochiq bo'lganda (NYSE/NASDAQ, Nyu-York vaqti bilan) har daqiqada tekshiriladi ` +
+        `Bozor ochiq bo'lganda (NYSE/NASDAQ, Nyu-York vaqti bilan) muntazam tekshiriladi ` +
         `va signal chiqsa shu yerga yuboriladi.\n\n` +
         `/status — oxirgi signallar va bozor holati\n` +
         `/stop — signal olishni to'xtatish`,
@@ -153,4 +177,4 @@ async function sendSignal(bot, record) {
   }
 }
 
-module.exports = { buildBot, sendSignal, formatSignalMessage };
+module.exports = { buildBot, sendSignal, formatSignalMessage, getWebhookPath, setupWebhook };

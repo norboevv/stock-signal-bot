@@ -14,6 +14,10 @@ tarixi va backtest natijalarini ko'rsatuvchi web dashboard bilan birga keladi.
 | Volume Spike | Oxirgi 15 daqiqadagi hajm 20-kunlik o'rtachadan 2x oshsa |
 | MACD | Signal-line crossover (12/26/9) |
 | Bollinger Bands | Narx yuqori/quyi banddan chiqib ketishi (20, 2σ) |
+| RSI Reversal | RSI oversold zonadan (<30) yuqoriga richalanganda |
+| EMA Crossover | 9/21, 9/50, 21/50, 50/200 juftliklari pastdan tepaga kesib o'tganda (faqat bullish) |
+
+`config.js`dagi `strategies` bo'limida har birini `enabled: true/false` bilan yoqish/o'chirish mumkin.
 
 Har bir symbol+strategiya juftligi uchun 30 daqiqalik cooldown bor — bitta signal ketma-ket
 spam qilib yuborilmaydi.
@@ -29,6 +33,11 @@ cp .env.example .env
 
 - **TELEGRAM_BOT_TOKEN** — Telegram'da `@BotFather` ga yozib `/newbot` bilan yangi bot
   yarating, u bergan tokenni shu yerga qo'ying.
+- **TELEGRAM_WEBHOOK_SECRET** va **CRON_SECRET** — tasodifiy satrlar, generatsiya qilish:
+  `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`
+- **PUBLIC_URL** — ilovaning tashqi HTTPS manzili (masalan `https://bot.example.com`).
+  Lokal test uchun bu majburiy emas (webhook ro'yxatdan o'tkazish xatosi bilan
+  o'tkazib yuboriladi, qolgan hammasi ishlayveradi).
 - **DASHBOARD_PASSWORD** — web dashboard'ga kirish uchun parol (Basic Auth). Standart
   qiymatni albatta o'zgartiring.
 - **PORT** — lokal ishga tushirishda dashboard porti (standart 3000). aHost.uz'da bu
@@ -40,13 +49,24 @@ Ishga tushirish:
 npm start
 ```
 
-Bu bitta process ichida uchtasini birdan ishga tushiradi:
-- Telegram bot (polling rejimida). Botga `/start` yozgan har bir kishi avtomatik signal
-  ro'yxatiga qo'shiladi (`data/subscribers.json`) va signallarni oladi; `/stop` bilan
-  chiqib ketish mumkin; `/status` — oxirgi signallar, bozor holati va obunachilar soni.
-- Web dashboard (`http://localhost:3000`)
-- Scheduler — har daqiqada, faqat NYSE/NASDAQ ochiq vaqtida (`America/New_York`, DST
-  avtomatik) barcha strategiyalarni tekshiradi
+### Arxitektura — nega webhook + tashqi cron?
+
+Shared hosting'da (cPanel + Phusion Passenger) Node ilovasi **so'rovlar orasida doim
+tirik turmaydi** — Passenger uni resurs tejash uchun tez-tez o'chirib-yoqib turadi.
+Shuning uchun bu loyiha an'anaviy "doim fonda ishlaydigan bot" o'rniga so'rov-asosli
+arxitekturadan foydalanadi:
+
+- **Telegram bot** — long-polling (`bot.launch()`) o'rniga **webhook** ishlatadi:
+  Telegram har yangi xabar kelganda o'zi `/telegram-webhook/<TELEGRAM_WEBHOOK_SECRET>`
+  manziliga POST so'rov yuboradi. `/start`, `/status`, `/stop` shu so'rov ichida,
+  bir zumda ishlanadi — process doimiy ishlab turishi shart emas.
+- **Strategiya tsikli** — ichki `node-cron` o'rniga **tashqi cPanel Cron Job**
+  `/api/run-cycle?token=<CRON_SECRET>` manziliga vaqti-vaqti bilan (masalan har 5
+  daqiqada) so'rov yuboradi. Shu bitta HTTP so'rov ichida barcha aksiyalar
+  tekshiriladi va topilgan signallar yuboriladi, so'ng javob qaytariladi.
+
+Ikkalasi ham Passenger'ning "so'rov kelsa ishga tush, javob ber, kerak bo'lsa
+o'chib qol" tamoyiliga mos — process doimiy tirik turishiga tayanmaydi.
 
 ## 2. Backtesting
 
@@ -90,24 +110,28 @@ kafolatlamaydi.
    npm install
    ```
 5. cPanel Node.js App sahifasidagi **Environment Variables** bo'limiga `.env`
-   fayldagi qiymatlarni qo'shing (`TELEGRAM_BOT_TOKEN`, `DASHBOARD_PASSWORD`).
-   `PORT`ni qo'lda qo'shmang — Passenger buni o'zi beradi. Parolda `!`, `$`, `` ` ``,
+   fayldagi qiymatlarni qo'shing: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`,
+   `CRON_SECRET`, `PUBLIC_URL` (masalan `https://bot.landmark.uz`), `DASHBOARD_PASSWORD`.
+   `PORT`ni qo'lda qo'shmang — Passenger buni o'zi beradi. Qiymatlarda `!`, `$`, `` ` ``,
    `"`, boshqa maxsus belgilardan foydalanmang — cPanel'ning ba'zi versiyalarida
    ular env var export skriptini buzadi.
-6. **Restart** tugmasini bosing. Ilova ishga tushgach, cPanel ko'rsatgan domen/subdomen
-   orqali dashboard ochiladi, bot esa Telegram'da polling rejimida ishlay boshlaydi.
-7. Tekshirish: Telegram'da botga `/start` yozing — javob va obuna tasdig'i kelishi kerak.
+6. **Restart** tugmasini bosing. Ilova ishga tushgach, `PUBLIC_URL` manzilida
+   dashboard ochiladi va bot avtomatik ravishda Telegram'ga webhook manzilini
+   ("shu yerga xabar yubor") ro'yxatdan o'tkazadi.
+7. **cPanel Cron Job yarating** (Tools → Cron Jobs) — strategiya tsiklini muntazam
+   ishga tushirish uchun (masalan har 5 daqiqada, `*/5 * * * *`):
+   ```bash
+   curl -s -o /dev/null "https://bot.landmark.uz/api/run-cycle?token=<CRON_SECRET>"
+   ```
+   Bu bir yo'la ikkita vazifani bajaradi: strategiyalarni tekshiradi **va** Passenger'ni
+   ilovani o'chirib qo'yishidan saqlab, doim "uyg'oq" ushlab turadi.
+8. Tekshirish: Telegram'da botga `/start` yozing — javob va obuna tasdig'i kelishi kerak.
    Oila a'zolari ham xuddi shu botga `/start` bosishi kifoya — hammasi avtomatik signal
    oluvchilar ro'yxatiga qo'shiladi. `/status` — bozor holati va obunachilar soni.
 
-**Muhim:** Node App sozlamalarini o'zgartirib qayta-qayta test qilayotganda, terminalda
-qo'lda `node index.js` ishga tushirsangiz, uni **Ctrl+C** bilan albatta to'xtating va
-Passenger'ning o'z nusxasi bilan bir vaqtda ikkalasi ishlab turmasin — Telegram bitta
-bot tokeniga faqat bitta polling ulanishga ruxsat beradi, ikkinchisi bo'lsa botning
-javob berishini to'sib qo'yishi mumkin.
-
-**Eslatma:** cPanel Passenger jarayonni doim tirik ushlab turadi (crash bo'lsa qayta
-ishga tushiradi), shuning uchun alohida process manager (pm2 va h.k.) kerak emas.
+**Muhim:** hostingning haqiqiy PUBLIC_URL manziliga `curl` orqali qo'lda so'rov yuborib
+ko'rish mumkin (`/api/run-cycle?token=...`) — bu strategiya tsiklini darhol, cron
+kutmasdan ishga tushiradi, sozlamalarni tekshirish uchun qulay.
 
 ## Fayl strukturasi
 
@@ -119,12 +143,11 @@ src/strategyEngine.js   — barcha strategiyalarni birlashtiradi + cooldown
 src/marketHours.js      — bozor ochiq/yopiqligini tekshiradi
 src/signalStore.js      — signal tarixini data/signals.json'ga saqlaydi
 src/backtester.js       — tarixiy ma'lumot bo'yicha strategiya aniqligini hisoblaydi
-src/webDashboard.js     — Express dashboard (signal tarixi + backtest natijalari)
-src/telegramBot.js      — Telegraf setup, /start, /status, signal xabarlari
-src/scheduler.js        — node-cron bilan har daqiqalik tsikl
+src/webDashboard.js     — Express dashboard + /telegram-webhook + /api/run-cycle
+src/telegramBot.js      — Telegraf setup, /start, /status, signal xabarlari, webhook
 scripts/backtest.js     — backtest'ni CLI orqali ishga tushirish
 public/index.html       — dashboard frontend
-index.js                — entry point (bot + dashboard + scheduler birga)
+index.js                — entry point (bot + dashboard, webhook ro'yxatdan o'tkazish)
 ```
 
 ## Ma'lum cheklovlar

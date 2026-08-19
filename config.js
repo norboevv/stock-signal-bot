@@ -30,11 +30,27 @@ module.exports = {
 
   telegram: {
     token: process.env.TELEGRAM_BOT_TOKEN,
+    // Webhook manzilining bir qismi — taxmin qilib bo'lmaydigan yo'l orqali
+    // Telegram'dan boshqa hech kim shu endpoint'ga soxta update yubora olmasligi uchun.
+    webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET,
+  },
+
+  // Shared hosting (Passenger) so'rovlar orasida process'ni "tirik" ushlab
+  // turmagani uchun, fon rejimidagi ichki cron (node-cron) o'rniga tashqi
+  // cPanel Cron Job /api/run-cycle manziliga so'rov yuborib, strategiya
+  // tsiklini bitta HTTP so'rov ichida ishga tushiradi. Bu maxfiy token shu
+  // so'rovni tasodifiy tashrif buyuruvchilardan himoya qiladi.
+  cron: {
+    secret: process.env.CRON_SECRET,
   },
 
   server: {
     port: process.env.PORT || 3000,
     dashboardPassword: process.env.DASHBOARD_PASSWORD || 'change-me',
+    // cPanel/Passenger'da ilova o'ziga tegishli to'liq domen manzilini
+    // bilmaydi (faqat localhost:PORT eshitadi) — webhook ro'yxatdan
+    // o'tkazish uchun bu tashqi (public) manzil qo'lda beriladi.
+    publicUrl: process.env.PUBLIC_URL,
   },
 
   // Har bir strategiya uchun sozlamalar
