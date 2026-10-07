@@ -1,6 +1,6 @@
 # stock-signal-bot
 
-AQSH aksiyalarini (AKAM, MRVL, CRDO, NOW, GOOGL, TSLA, NVDA, MU, INTC, AEHR, ZS) real-time
+AQSH aksiyalarini (`config.js`dagi `symbols` ro'yxati — hozir 21 ta: AEHR, ALAB, ANET, APLD, APP, AVGO, CBRS, CRDO, CIEN, CRWD, HIMS, IREN, MRVL, MSTR, MU, NVDA, NOW, SNDK, SPCX, ZETA, RDDT) real-time
 kuzatib, texnik indikatorlar signal berganda Telegram orqali xabar yuboradigan bot. Signal
 tarixi va backtest natijalarini ko'rsatuvchi web dashboard bilan birga keladi.
 
