@@ -20,8 +20,8 @@ const TYPE_DIRECTION = {
   ema_bullish_cross: 1,
 };
 
-// Volume Spike intraday (1-daqiqalik) ma'lumot talab qiladi, Yahoo esa buni
-// faqat oxirgi bir necha kun uchun beradi — shu sabab tarixiy backtest'ga kiritilmagan.
+// Volume Spike va VWAP Cross intraday (1-daqiqalik) ma'lumot talab qiladi, Yahoo esa
+// buni faqat oxirgi bir necha kun uchun beradi — shu sabab tarixiy backtest'ga kiritilmagan.
 const BACKTEST_CHECKS = [
   { key: 'rsi', fn: (window, cfg) => indicators.checkRsi(window, cfg.rsi) },
   { key: 'maCrossover', fn: (window, cfg) => indicators.checkMaCrossover(window, cfg.maCrossover) },

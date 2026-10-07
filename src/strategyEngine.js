@@ -12,6 +12,7 @@ const STRATEGY_CHECKS = [
   { key: 'bollingerBands', fn: (daily, intraday, cfg) => indicators.checkBollingerBands(daily, cfg) },
   { key: 'rsiReversal', fn: (daily, intraday, cfg) => indicators.checkRsiReversal(daily, cfg) },
   { key: 'emaCrossover', fn: (daily, intraday, cfg) => indicators.checkEmaCrossover(daily, cfg) },
+  { key: 'vwapCross', fn: (daily, intraday, cfg) => indicators.checkVwapCross(intraday, cfg) },
 ];
 
 // Daily candle'lar daqiqada bir necha marta o'zgarmaydi — Yahoo'ga har daqiqada

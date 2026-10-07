@@ -18,6 +18,7 @@ const TYPE_EMOJI = {
   lower_breakout: '🟢',
   oversold_reversal: '🟢',
   ema_bullish_cross: '🟢',
+  vwap_bullish_cross: '🟢',
 };
 
 const STRATEGY_LABELS = {
@@ -28,6 +29,7 @@ const STRATEGY_LABELS = {
   macd: 'MACD',
   bollingerBands: 'Bollinger Bands',
   rsiReversal: 'RSI Reversal',
+  vwapCross: 'VWAP Cross',
 };
 
 function enabledStrategyList() {

@@ -276,6 +276,53 @@ function checkEmaCrossover(dailyCandles, cfg) {
   return signals.length > 0 ? signals : null;
 }
 
+/**
+ * Narx VWAP'ni pastdan tepaga kesib o'tishi (bullish). VWAP — joriy savdo
+ * kunining 1 daqiqalik candle'laridan hisoblanadigan sessiya VWAP'i
+ * (typical price × hajm, kumulyativ). Tashqi cron har bir necha daqiqada
+ * ishlagani uchun faqat oxirgi candle'ni emas, oxirgi cfg.lookbackMinutes
+ * daqiqa ichidagi kesishni qidiramiz (cron orasida sodir bo'lgan kesishni
+ * o'tkazib yubormaslik uchun); narx hozir ham VWAP'dan yuqorida bo'lishi
+ * shart. Takroriy signalni cooldown to'sadi. Seansning boshidagi
+ * cfg.minCandles daqiqa o'tkazib yuboriladi — VWAP u yerda narxga deyarli
+ * teng bo'lib, kesishlar shovqin bo'ladi.
+ */
+function checkVwapCross(intradayCandles, cfg) {
+  if (intradayCandles.length < cfg.minCandles + 1) return null;
+
+  const vwap = [];
+  let cumPV = 0;
+  let cumV = 0;
+  for (const c of intradayCandles) {
+    cumPV += ((c.high + c.low + c.close) / 3) * c.volume;
+    cumV += c.volume;
+    vwap.push(cumV > 0 ? cumPV / cumV : null);
+  }
+
+  const lastIdx = intradayCandles.length - 1;
+  const last = intradayCandles[lastIdx];
+  if (vwap[lastIdx] == null || last.close <= vwap[lastIdx]) return null;
+
+  const cutoff = last.time.getTime() - cfg.lookbackMinutes * 60 * 1000;
+  for (let i = lastIdx; i >= cfg.minCandles; i--) {
+    const curr = intradayCandles[i];
+    if (curr.time.getTime() < cutoff) break;
+    const prev = intradayCandles[i - 1];
+    if (vwap[i] == null || vwap[i - 1] == null) continue;
+
+    if (prev.close <= vwap[i - 1] && curr.close > vwap[i]) {
+      return {
+        strategy: 'VWAP Cross',
+        type: 'vwap_bullish_cross',
+        price: last.close,
+        message: `Narx (${last.close.toFixed(2)}) VWAP'ni (${vwap[lastIdx].toFixed(2)}) pastdan tepaga kesib o'tdi`,
+        meta: { vwap: vwap[lastIdx], crossedAt: curr.time },
+      };
+    }
+  }
+  return null;
+}
+
 module.exports = {
   checkRsi,
   checkMaCrossover,
@@ -285,4 +332,5 @@ module.exports = {
   checkBollingerBands,
   checkRsiReversal,
   checkEmaCrossover,
+  checkVwapCross,
 };

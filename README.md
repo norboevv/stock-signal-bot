@@ -15,9 +15,13 @@ tarixi va backtest natijalarini ko'rsatuvchi web dashboard bilan birga keladi.
 | MACD | Signal-line crossover (12/26/9) |
 | Bollinger Bands | Narx yuqori/quyi banddan chiqib ketishi (20, 2σ) |
 | RSI Reversal | RSI oversold zonadan (<30) yuqoriga richalanganda |
-| EMA Crossover | 9/21, 9/50, 21/50, 50/200 juftliklari pastdan tepaga kesib o'tganda (faqat bullish) |
+| EMA Crossover | EMA 9 EMA 21'ni pastdan tepaga kesib o'tganda (faqat bullish; `pairs` ro'yxatiga boshqa juftliklar qo'shish mumkin) |
+| VWAP Cross | Narx sessiya VWAP'ini (1 daqiqalik candle'lardan) pastdan tepaga kesib o'tganda |
 
 `config.js`dagi `strategies` bo'limida har birini `enabled: true/false` bilan yoqish/o'chirish mumkin.
+Hozir **yoqilgan**: Support/Resistance, EMA Crossover (9/21), VWAP Cross, RSI Reversal.
+Qolganlari (RSI, MA 50/200, Volume Spike, MACD, Bollinger Bands) kodda bor, lekin `enabled: false`.
+VWAP Cross va Volume Spike intraday ma'lumotga tayanadi, shuning uchun backtest'ga kirmaydi.
 
 Har bir symbol+strategiya juftligi uchun 30 daqiqalik cooldown bor — bitta signal ketma-ket
 spam qilib yuborilmaydi.

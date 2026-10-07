@@ -52,13 +52,13 @@ module.exports = {
       lookbackDays: 20,
     },
     volumeSpike: {
-      enabled: true,
+      enabled: false,
       lookbackDays: 20,
       multiplier: 2,
       windowMinutes: 15,
     },
     macd: {
-      enabled: true,
+      enabled: false,
       fastPeriod: 12,
       slowPeriod: 26,
       signalPeriod: 9,
@@ -77,10 +77,16 @@ module.exports = {
       enabled: true,
       pairs: [
         { fastPeriod: 9, slowPeriod: 21 },
-        { fastPeriod: 9, slowPeriod: 50 },
-        { fastPeriod: 21, slowPeriod: 50 },
-        { fastPeriod: 50, slowPeriod: 200 },
       ],
+    },
+    // Narx VWAP'ni pastdan tepaga kesib o'tishi (1 daqiqalik candle'lardan
+    // hisoblangan sessiya VWAP'i). lookbackMinutes cron intervalidan kamida
+    // 2 baravar katta bo'lishi kerak, aks holda cron orasidagi kesishlar
+    // o'tkazib yuboriladi.
+    vwapCross: {
+      enabled: true,
+      minCandles: 15,
+      lookbackMinutes: 10,
     },
   },
 
