@@ -4,6 +4,41 @@ function closesOf(candles) {
   return candles.map((c) => c.close);
 }
 
+/** Indikator natijasini (boshida period-1 ta qiymat kam) candle'lar bilan bir uzunlikka keltiradi — boshiga null qo'shib. */
+function padLeft(values, totalLength) {
+  return new Array(totalLength - values.length).fill(null).concat(values);
+}
+
+/**
+ * Tekshiriladigan candle indekslari, eng yangisidan boshlab. lookbackMinutes
+ * berilmasa — faqat oxirgi candle (kunlik rejim); berilsa — oxirgi candle
+ * vaqtidan shuncha daqiqa ichidagi barcha candle'lar (1 daqiqalik rejim:
+ * cron orasida sodir bo'lgan kesishni o'tkazib yubormaslik uchun).
+ */
+function recentIndices(candles, lookbackMinutes) {
+  const last = candles.length - 1;
+  if (!lookbackMinutes) return [last];
+  const cutoff = candles[last].time.getTime() - lookbackMinutes * 60 * 1000;
+  const out = [];
+  for (let i = last; i >= 0 && candles[i].time.getTime() >= cutoff; i--) out.push(i);
+  return out;
+}
+
+function timeframeTag(cfg) {
+  return cfg.lookbackMinutes ? ' [1m]' : '';
+}
+
+/**
+ * Joriy daqiqada hali tugamagan (shakllanayotgan) oxirgi 1 daqiqalik
+ * candle'ni olib tashlaydi — aks holda RSI/EMA har soniya o'zgarib, kesishish
+ * paydo bo'lib yana yo'qolib ("repaint") qolishi mumkin.
+ */
+function closedCandles(candles, now = Date.now()) {
+  if (candles.length === 0) return candles;
+  const last = candles[candles.length - 1];
+  return now - last.time.getTime() < 60 * 1000 ? candles.slice(0, -1) : candles;
+}
+
 /**
  * RSI(14) oversold/overbought. Har safar signal berilaverishining oldini olish
  * uchun faqat chegaradan "kesib o'tgan" paytda (oldingi bar chegara ichida
@@ -219,24 +254,32 @@ function checkBollingerBands(dailyCandles, cfg) {
  * turganda emas, aynan yo'nalish o'zgargan (richalanish boshlangan) daqiqada
  * triggerlanadi.
  */
-function checkRsiReversal(dailyCandles, cfg) {
-  const closes = closesOf(dailyCandles);
-  const values = RSI.calculate({ values: closes, period: cfg.period });
-  if (values.length < 3) return null;
+function checkRsiReversal(candles, cfg) {
+  if (candles.length < 3) return null;
+  const closes = closesOf(candles);
+  const rsi = padLeft(RSI.calculate({ values: closes, period: cfg.period }), closes.length);
+  const lastIdx = closes.length - 1;
+  if (rsi[lastIdx] == null) return null;
 
-  const prev2 = values[values.length - 3];
-  const prev = values[values.length - 2];
-  const curr = values[values.length - 1];
-  const price = closes[closes.length - 1];
+  // cfg.lookbackMinutes berilmasa (kunlik rejim) — faqat oxirgi candle.
+  // Berilsa (1 daqiqalik rejim) — shu oyna ichidagi oxirgi richalanish,
+  // lekin RSI hozir ham trough'dan yuqorida turgan bo'lishi shart.
+  for (const i of recentIndices(candles, cfg.lookbackMinutes)) {
+    if (i < 2) break;
+    const prev2 = rsi[i - 2];
+    const prev = rsi[i - 1];
+    const curr = rsi[i];
+    if (prev2 == null || prev == null || curr == null) continue;
 
-  if (prev < cfg.oversoldThreshold && prev2 > prev && curr > prev) {
-    return {
-      strategy: 'RSI Reversal',
-      type: 'oversold_reversal',
-      price,
-      message: `RSI(${cfg.period}) oversold zonadan (${prev.toFixed(1)}) richalanmoqda — hozir ${curr.toFixed(1)}`,
-      meta: { rsi: curr, trough: prev },
-    };
+    if (prev < cfg.oversoldThreshold && prev2 > prev && curr > prev && rsi[lastIdx] > prev) {
+      return {
+        strategy: 'RSI Reversal',
+        type: 'oversold_reversal',
+        price: closes[lastIdx],
+        message: `RSI(${cfg.period}) oversold zonadan (${prev.toFixed(1)}) richalanmoqda — hozir ${rsi[lastIdx].toFixed(1)}${timeframeTag(cfg)}`,
+        meta: { rsi: rsi[lastIdx], trough: prev },
+      };
+    }
   }
   return null;
 }
@@ -247,29 +290,34 @@ function checkRsiReversal(dailyCandles, cfg) {
  * 21/50, 50/200) — bir kunda bir nechta juftlik bir vaqtda crossover berishi
  * mumkin, shuning uchun bitta signal o'rniga massiv qaytaradi.
  */
-function checkEmaCrossover(dailyCandles, cfg) {
-  const closes = closesOf(dailyCandles);
+function checkEmaCrossover(candles, cfg) {
+  if (candles.length < 3) return null;
+  const closes = closesOf(candles);
+  const lastIdx = closes.length - 1;
+  const indices = recentIndices(candles, cfg.lookbackMinutes);
   const signals = [];
 
   for (const pair of cfg.pairs) {
-    const fast = EMA.calculate({ values: closes, period: pair.fastPeriod });
-    const slow = EMA.calculate({ values: closes, period: pair.slowPeriod });
-    if (fast.length < 2 || slow.length < 2) continue;
+    const fast = padLeft(EMA.calculate({ values: closes, period: pair.fastPeriod }), closes.length);
+    const slow = padLeft(EMA.calculate({ values: closes, period: pair.slowPeriod }), closes.length);
+    if (fast[lastIdx] == null || slow[lastIdx] == null) continue;
+    // Kesishdan keyin EMA hozir ham tezkor > sekin holatida turishi kerak
+    if (fast[lastIdx] <= slow[lastIdx]) continue;
 
-    const fastCurr = fast[fast.length - 1];
-    const fastPrev = fast[fast.length - 2];
-    const slowCurr = slow[slow.length - 1];
-    const slowPrev = slow[slow.length - 2];
-    const price = closes[closes.length - 1];
+    for (const i of indices) {
+      if (i < 1) break;
+      if (fast[i - 1] == null || slow[i - 1] == null) continue;
 
-    if (fastPrev <= slowPrev && fastCurr > slowCurr) {
-      signals.push({
-        strategy: `EMA ${pair.fastPeriod}/${pair.slowPeriod} Crossover`,
-        type: 'ema_bullish_cross',
-        price,
-        message: `EMA${pair.fastPeriod} (${fastCurr.toFixed(2)}) EMA${pair.slowPeriod}dan (${slowCurr.toFixed(2)}) pastdan tepaga o'tdi`,
-        meta: { fast: fastCurr, slow: slowCurr, fastPeriod: pair.fastPeriod, slowPeriod: pair.slowPeriod },
-      });
+      if (fast[i - 1] <= slow[i - 1] && fast[i] > slow[i]) {
+        signals.push({
+          strategy: `EMA ${pair.fastPeriod}/${pair.slowPeriod} Crossover`,
+          type: 'ema_bullish_cross',
+          price: closes[lastIdx],
+          message: `EMA${pair.fastPeriod} (${fast[lastIdx].toFixed(2)}) EMA${pair.slowPeriod}dan (${slow[lastIdx].toFixed(2)}) pastdan tepaga o'tdi${timeframeTag(cfg)}`,
+          meta: { fast: fast[lastIdx], slow: slow[lastIdx], fastPeriod: pair.fastPeriod, slowPeriod: pair.slowPeriod },
+        });
+        break;
+      }
     }
   }
 
@@ -333,4 +381,5 @@ module.exports = {
   checkRsiReversal,
   checkEmaCrossover,
   checkVwapCross,
+  closedCandles,
 };

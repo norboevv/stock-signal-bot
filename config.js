@@ -68,13 +68,21 @@ module.exports = {
       period: 20,
       stdDev: 2,
     },
+    // timeframe: '1m' — 1 daqiqalik (tugagan) candle'lar; '1d' (yoki berilmasa)
+    // — kunlik. lookbackMinutes (faqat 1m uchun) cron intervalidan kamida 2
+    // baravar katta bo'lishi kerak, aks holda cron orasida sodir bo'lgan
+    // signallar o'tkazib yuboriladi.
     rsiReversal: {
       enabled: true,
       period: 14,
       oversoldThreshold: 30,
+      timeframe: '1m',
+      lookbackMinutes: 10,
     },
     emaCrossover: {
       enabled: true,
+      timeframe: '1m',
+      lookbackMinutes: 10,
       pairs: [
         { fastPeriod: 9, slowPeriod: 21 },
       ],

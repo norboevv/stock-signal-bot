@@ -20,16 +20,15 @@ const TYPE_DIRECTION = {
   ema_bullish_cross: 1,
 };
 
-// Volume Spike va VWAP Cross intraday (1-daqiqalik) ma'lumot talab qiladi, Yahoo esa
-// buni faqat oxirgi bir necha kun uchun beradi — shu sabab tarixiy backtest'ga kiritilmagan.
+// Volume Spike, VWAP Cross, RSI Reversal va EMA Crossover (1 daqiqalik rejimda) intraday
+// ma'lumot talab qiladi, Yahoo esa buni faqat oxirgi bir necha kun uchun beradi — shu sabab
+// tarixiy backtest'ga kiritilmagan (kunlik backtest ularning jonli xatti-harakatini aks ettirmaydi).
 const BACKTEST_CHECKS = [
   { key: 'rsi', fn: (window, cfg) => indicators.checkRsi(window, cfg.rsi) },
   { key: 'maCrossover', fn: (window, cfg) => indicators.checkMaCrossover(window, cfg.maCrossover) },
   { key: 'supportResistance', fn: (window, cfg) => indicators.checkSupportResistance(window, cfg.supportResistance) },
   { key: 'macd', fn: (window, cfg) => indicators.checkMacd(window, cfg.macd) },
   { key: 'bollingerBands', fn: (window, cfg) => indicators.checkBollingerBands(window, cfg.bollingerBands) },
-  { key: 'rsiReversal', fn: (window, cfg) => indicators.checkRsiReversal(window, cfg.rsiReversal) },
-  { key: 'emaCrossover', fn: (window, cfg) => indicators.checkEmaCrossover(window, cfg.emaCrossover) },
 ];
 
 const MIN_BARS = 200; // MA200 uchun kamida shuncha bar kerak

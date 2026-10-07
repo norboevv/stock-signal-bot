@@ -32,15 +32,22 @@ const STRATEGY_LABELS = {
   vwapCross: 'VWAP Cross',
 };
 
+function timeframeSuffix(key, cfg) {
+  if (key === 'vwapCross') return ' (1m)';
+  if (key === 'rsiReversal' || key === 'emaCrossover') return cfg.timeframe === '1m' ? ' (1m)' : ' (kunlik)';
+  if (key === 'supportResistance') return ' (kunlik)';
+  return '';
+}
+
 function enabledStrategyList() {
   return Object.entries(config.strategies)
     .filter(([, cfg]) => cfg.enabled)
     .map(([key, cfg]) => {
       if (key === 'emaCrossover' && Array.isArray(cfg.pairs)) {
         const pairList = cfg.pairs.map((p) => `${p.fastPeriod}/${p.slowPeriod}`).join(', ');
-        return `EMA Crossover (${pairList})`;
+        return `EMA Crossover ${pairList}${timeframeSuffix(key, cfg)}`;
       }
-      return STRATEGY_LABELS[key] || key;
+      return (STRATEGY_LABELS[key] || key) + timeframeSuffix(key, cfg);
     })
     .join(', ');
 }

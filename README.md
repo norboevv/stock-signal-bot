@@ -10,18 +10,27 @@ tarixi va backtest natijalarini ko'rsatuvchi web dashboard bilan birga keladi.
 |---|---|
 | RSI(14) | Oversold (<30) / overbought (>70) |
 | MA 50/200 Crossover | Golden cross / death cross |
-| Support/Resistance | 20 kunlik breakout |
+| Support/Resistance | 20 kunlik breakout (**kunlik** candle'lar) |
 | Volume Spike | Oxirgi 15 daqiqadagi hajm 20-kunlik o'rtachadan 2x oshsa |
 | MACD | Signal-line crossover (12/26/9) |
 | Bollinger Bands | Narx yuqori/quyi banddan chiqib ketishi (20, 2σ) |
-| RSI Reversal | RSI oversold zonadan (<30) yuqoriga richalanganda |
-| EMA Crossover | EMA 9 EMA 21'ni pastdan tepaga kesib o'tganda (faqat bullish; `pairs` ro'yxatiga boshqa juftliklar qo'shish mumkin) |
+| RSI Reversal | RSI oversold zonadan (<30) yuqoriga richalanganda. Hozir **1 daqiqalik** candle'lar (`timeframe: '1m'`) |
+| EMA Crossover | EMA 9 EMA 21'ni pastdan tepaga kesib o'tganda (faqat bullish; `pairs` ro'yxatiga boshqa juftliklar qo'shish mumkin). Hozir **1 daqiqalik** candle'lar |
 | VWAP Cross | Narx sessiya VWAP'ini (1 daqiqalik candle'lardan) pastdan tepaga kesib o'tganda |
 
 `config.js`dagi `strategies` bo'limida har birini `enabled: true/false` bilan yoqish/o'chirish mumkin.
 Hozir **yoqilgan**: Support/Resistance, EMA Crossover (9/21), VWAP Cross, RSI Reversal.
 Qolganlari (RSI, MA 50/200, Volume Spike, MACD, Bollinger Bands) kodda bor, lekin `enabled: false`.
-VWAP Cross va Volume Spike intraday ma'lumotga tayanadi, shuning uchun backtest'ga kirmaydi.
+**Timeframe:** Support/Resistance kunlik candle'larda; RSI Reversal, EMA Crossover va VWAP Cross
+1 daqiqalik (faqat **tugagan**, ya'ni yopilgan candle'lar) bo'yicha hisoblanadi. 1 daqiqalik
+signal bir daqiqa "yashagani" uchun, cron orasida sodir bo'lganlarni o'tkazib yubormaslik
+maqsadida oxirgi `lookbackMinutes` (10) daqiqa ichidagi hodisaga qaraladi va indikator hozir ham
+signal holatida turishi shart. Takroriy xabarni 30 daqiqalik cooldown to'sadi.
+`lookbackMinutes` cron intervalidan kamida 2 baravar katta bo'lsin.
+`timeframe`ni `'1d'` (yoki olib tashlab) kunlik rejimga qaytarish mumkin.
+
+Intraday ma'lumotga tayanganlari (VWAP Cross, Volume Spike, 1m rejimdagi RSI Reversal va
+EMA Crossover) backtest'ga kirmaydi.
 
 Har bir symbol+strategiya juftligi uchun 30 daqiqalik cooldown bor — bitta signal ketma-ket
 spam qilib yuborilmaydi.

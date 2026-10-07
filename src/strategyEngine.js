@@ -3,6 +3,12 @@ const indicators = require('./indicators');
 const { fetchDailyCandles, fetchIntradayCandles } = require('./dataFetcher');
 const signalStore = require('./signalStore');
 
+// timeframe: '1m' bo'lsa strategiya joriy kunning 1 daqiqalik (tugagan) candle'lari
+// bo'yicha, aks holda kunlik candle'lar bo'yicha hisoblanadi.
+function candlesFor(cfg, daily, intraday) {
+  return cfg.timeframe === '1m' ? indicators.closedCandles(intraday) : daily;
+}
+
 const STRATEGY_CHECKS = [
   { key: 'rsi', fn: (daily, intraday, cfg) => indicators.checkRsi(daily, cfg) },
   { key: 'maCrossover', fn: (daily, intraday, cfg) => indicators.checkMaCrossover(daily, cfg) },
@@ -10,8 +16,8 @@ const STRATEGY_CHECKS = [
   { key: 'volumeSpike', fn: (daily, intraday, cfg) => indicators.checkVolumeSpike(intraday, daily, cfg) },
   { key: 'macd', fn: (daily, intraday, cfg) => indicators.checkMacd(daily, cfg) },
   { key: 'bollingerBands', fn: (daily, intraday, cfg) => indicators.checkBollingerBands(daily, cfg) },
-  { key: 'rsiReversal', fn: (daily, intraday, cfg) => indicators.checkRsiReversal(daily, cfg) },
-  { key: 'emaCrossover', fn: (daily, intraday, cfg) => indicators.checkEmaCrossover(daily, cfg) },
+  { key: 'rsiReversal', fn: (daily, intraday, cfg) => indicators.checkRsiReversal(candlesFor(cfg, daily, intraday), cfg) },
+  { key: 'emaCrossover', fn: (daily, intraday, cfg) => indicators.checkEmaCrossover(candlesFor(cfg, daily, intraday), cfg) },
   { key: 'vwapCross', fn: (daily, intraday, cfg) => indicators.checkVwapCross(intraday, cfg) },
 ];
 
